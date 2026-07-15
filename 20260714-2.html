@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>導師聯絡簿每日抄寫系統</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; background-color: #ffffff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 98%; max-width: 1400px; display: flex; flex-direction: column; align-items: center; }
+        
+        .control-bar { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px; padding: 10px; flex-wrap: wrap; }
+        .info-tag { font-size: 1.5rem; font-weight: bold; background: #eef2f7; padding: 10px 20px; border-radius: 8px; border: 1px solid #d1d9e6; }
+        
+        
+.content-box {
+    background-color: #f4f7fc;
+    border-radius: 12px;
+
+    padding: 35px 40px;
+
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+        
+        /* --- 原始設定 --- */
+        
+.main-text-chinese {
+    font-size: 5.8rem;
+    line-height: 1.8;
+    font-weight: 600;
+    color: #000000;
+    white-space: pre-wrap;
+    letter-spacing: 0.05em;
+
+    width:100%;
+    text-align:center;
+}
+
+        .main-text-english { font-size: 4.0rem; line-height: 1.6; font-weight: 600; color: #000000; white-space: pre-wrap; word-break: break-word; }
+        .main-text-default { font-size: 3.5rem; line-height: 1.6; font-weight: 600; color: #000000; }
+        
+        /* --- 星期二設定：無白色框 --- */
+        .idiom-layout { width: 100%; }
+        .idiom-term { font-size: 5.8rem; font-weight: 700; color: #000; border-bottom: 5px solid #4a90e2; padding-bottom: 15px; margin-bottom: 25px; display: inline-block; }
+        .idiom-expl { font-size: 4.2rem; color: #333; line-height: 1.5; font-weight: 600; }
+
+
+.proverb-term{
+
+    width:101%;
+
+    font-size:4.9rem;
+
+    font-weight:620;
+
+    line-height:1.1;
+
+    letter-spacing:-0.02em;
+
+    word-spacing:8px;
+
+    margin-bottom:30px;
+}
+
+
+.proverb-translation{
+    border-left:10px solid #4a90e2;
+
+    padding-left:22px;
+
+    font-size:4.4rem;
+
+    font-weight:700;
+
+    color:#2f6fd8;
+
+    margin:18px 0;
+}
+
+
+
+.proverb-meaning{
+
+    font-size:4.2rem;
+
+    font-weight:600;
+
+    color:#2b2b2b;
+
+    line-height:1.5;
+
+    max-width:100%;
+}
+
+
+
+.proverb-expl {
+    font-size: 2.3rem;
+    color: #333;
+    line-height: 1.35;
+    font-weight: 600;
+}
+
+        .wrong-word-container { position: relative; display: inline-block; margin: 0 0.15em; color: #000000; vertical-align: top; }
+        .red-circle { position: absolute; top: 54%; left: 48%; transform: translate(-50%, -50%); border: 6px solid #ff0000; border-radius: 50%; width: 1.4em; height: 1.6em; pointer-events: none; box-sizing: border-box; }
+
+        input[type="date"] { font-size: 1.5rem; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; }
+        .btn-today { font-size: 1.4rem; padding: 8px 20px; background-color: #4a90e2; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        @media (max-width: 1024px) {
+            .main-text-chinese { font-size: 3.8rem; }
+            .main-text-english { font-size: 2.2rem; }
+            .main-text-default { font-size: 2.5rem; }
+            .red-circle { border-width: 4px; }
+        }
+
+        /* 手機版排版調整 */
+        @media (max-width: 767px) {
+            .control-bar { gap: 8px; }
+            .info-tag, input[type="date"], .btn-today { font-size: 1.2rem; padding: 6px 12px; }
+            .main-text-chinese { font-size: 2rem; }
+            .main-text-english { font-size: 1.3rem; }
+            .main-text-default { font-size: 1.5rem; }
+            .red-circle { border-width: 3px; }
+            .idiom-term { font-size: 2.2rem; margin-bottom: 15px; }
+            .idiom-expl { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="control-bar">
+        <span id="week-display" class="info-tag">第 -- 週</span>
+        <input type="date" id="date-picker" onchange="handleDateChange()">
+        <span id="weekday-display" class="info-tag">星期-</span>
+        <button class="btn-today" onclick="setToToday()">回到今天</button>
+    </div>
+    <div class="content-box">
+        <div id="display-area" class="main-text-default">載入中...</div>
+    </div>
+</div>
+<script>
+    const FALL_START = new Date(2026, 7, 31);     // 上學期
+    const SPRING_START = new Date(2027, 1, 15);   // 下學期（第2週開始） 
+    const mondayData1 = { 
+1: "走「頭」無路 → 投\n按「步」就班 → 部\n相形見「拙」 → 絀", 
+2: "惹「是」生非 → 事\n既往不「究」 → 咎\n杯盤狼「籍」 → 藉", 
+3: "冒險「患」難 → 犯\n名不「符」實 → 副\n披星「載」月 → 戴", 
+4: "白頭「諧」老 → 偕\n莫「明」其妙 → 名\n「即」時行樂 → 及", 
+5: "「箭」拔弩張 → 劍\n動「則」得咎 → 輒\n始作「蛹」者 → 俑", 
+6: "再接再「勵」 → 厲\n「重」山峻嶺 → 崇\n伶牙「利」齒 → 俐", 
+7: "前「踞」後恭 → 倨 \n名列前「矛」 → 茅\n不「齒」下問 → 恥", 
+8: "破「斧」沉舟 → 釜\n提心「吊」膽 → 弔\n「饒」勇善戰 → 驍", 
+9: "「燴」炙人口 → 膾\n老奸巨「滑」 → 猾\n如火如「茶」 → 荼", 
+10: "肆無忌「彈」 → 憚\n「磨」頂放踵 → 摩\n老牛「嗜」犢 → 舐", 
+11: "「泌」人心脾 → 沁\n美「侖」美奐 → 輪\n「鍛」羽而歸 → 鎩", 
+12: "毛骨「聳」然 → 悚\n粗製「爛」造 → 濫\n「節」風沐雨 → 櫛", 
+13: "光風「齋」月 → 霽\n始終不「逾」 → 渝\n以逸「代」勞 → 待", 
+14: "不「醒」人事 → 省\n「循」私舞弊 → 徇\n急流「湧」退 → 勇", 
+15: "「垂」手可得 → 唾\n出類拔「粹」 → 萃\n提綱「契」領 → 挈", 
+16: "中流「柢」柱 → 砥\n「驅」之若鶩 → 趨\n對牛「談」琴 → 彈", 
+17: "傾家「盪」產 → 蕩\n追根究「抵」 → 柢\n金榜「提」名 → 題", 
+18: "破「啼」為笑 → 涕\n「托」泥帶水 → 拖\n按「耐」不住 → 捺", 
+19: "知書達「理」 → 禮\n民不「寥」生 → 聊\n衣衫襤「縷」 → 褸", 
+20: "死有餘「孤」 → 辜\n一「股」作氣 → 鼓\n「固」步自封 → 故" };
+
+    const mondayIdiom1 = {
+1: "手足無措\n形容遇到事情時，舉止慌亂，不知道該怎麼辦的樣子。",
+2: "有備無患\n事前做好準備，可以避免禍患。",
+3: "紙上談兵\n比喻只會不切實際的空談，卻無法實際解決問題。",
+4: "驍勇善戰\n勇猛矯健，精於領兵作戰。",
+5: "汗馬功勞\n比喻在勞苦征戰中得到的功勞；現在泛指在事業上立下功勞，有所貢獻。",
+6: "出奇制勝\n派出奇兵，或用奇謀，解決難題，制敵取勝。多用於戰鬥、競賽有關的事。",
+7: "口若懸河\n形容人能言善辯，很會說話。",
+8: "呼風喚雨\n呼風就能颳風，喚雨就能下雨；比喻人神通廣大，很有影響力。",
+9: "老當益壯\n形容人年紀雖大，但是身體健康，志氣豪壯，依然很有幹勁。",
+10: "憂心忡忡\n形容人心中有所牽掛，憂慮不安。",
+11: "一意孤行\n不接受他人的意見或勸說，固執己見，獨斷獨行。",
+12: "閒情逸致\n心中沒有牽掛，心境悠閒安逸，非常自在。",
+13: "因噎廢食\n因為怕吃飯噎住了，乾脆連飯也不吃；比喻因害怕犯錯或遇到困難，就把應該做的事情停止不做。",
+14: "醉生夢死\n形容人糊糊塗塗，過著像醉酒或做夢般的生活。",
+15: "恃才傲物\n仗恃自己的才華，態度驕傲，看不起別人。",
+16: "亡羊補牢\n比喻問題發生後，及時想辦法補救，免得遭受更大的損失。",
+17: "忍辱負重\n忍受屈辱以承擔重任。",
+18: "莫衷一是\n各有不同的意見與說法，無法判斷哪一個是正確的。",
+19: "鳳毛麟角\n比喻珍貴且稀少的人才或事物。",
+20: "大放厥詞\n原指大展文才；後多用來形容人大發議論或謬論。"
+};
+
+
+const tuesdaySentence1 = {
+1: "手足無措\n這場突如其來的疫情，讓許多人一時手足無措。",
+2: "有備無患\n最近地震頻仍，家中最好備有手電筒、收音機、飲用水等，有備無患。",
+3: "紙上談兵\n若沒有經費，這個興建老人安養院的計畫，也只不過是紙上談兵罷了！",
+4: "驍勇善戰\n飛將軍李廣，驍勇善戰，是漢代赫赫有名的大將軍。",
+5: "汗馬功勞\n王副總每天工作超過十二個小時，為公司立下無數的汗馬功勞。",
+6: "出奇制勝\n這場球賽，競爭十分激烈，想獲得冠軍，必須出奇制勝。",
+7: "口若懸河\n憑你口若懸河般的口才，這次演講比賽的冠軍，想必非你莫屬。",
+8: "呼風喚雨\n他在公司裡呼風喚雨，許多事情都能由他決定。",
+9: "老當益壯\n王伯伯老當益壯，在馬拉松賽跑中一馬當先，奪得冠軍。",
+10: "憂心忡忡\n妹妹高燒不退，讓媽媽憂心忡忡，一夜未闔眼。",
+11: "一意孤行\n這件事情最終會失敗，都是你一意孤行的結果。",
+12: "閒情逸致\n大家忙著準備活動時，他還有閒情逸致去看電影。",
+13: "因噎廢食\n你不能因為怕被同學欺負，就每天躲在家中，不去上學，這樣因噎廢食是不能解決問題的。",
+14: "醉生夢死\n林先生發了一筆意外之財後，就不再工作，每天過著醉生夢死的生活。",
+15: "恃才傲物\n他雖然很有才能，卻因恃才傲物而受到批評。",
+16: "亡羊補牢\n你過去忙於工作，忽略了親子感情的培養，現在亡羊補牢，還不算太晚。",
+17: "忍辱負重\n如果這是任務所需，我願意忍辱負重，盡力而為。",
+18: "莫衷一是\n對於是否舉辦這項活動，大家意見不同，莫衷一是。",
+19: "鳳毛麟角\n目前世界上看懂這種古文字的，已如鳳毛麟角，沒幾個人了。",
+20: "大放厥詞\n王議員一到議場上就大放厥詞，批評市政府官員無能。"
+};
+
+    const thursdayData1 = { 
+1: "courage (n.) /ˈkɝɪdʒ/ 勇氣\nalbum (n.) /ˈælbəm/ 相簿、集郵簿、唱片集\naccept (v.) /əkˈsɛpt/ 接受\ncrowded (adj.) /ˈkraʊdɪd/ 擁擠的",
+
+
+
+2: "improve (v.) /ɪˈmpruv/ 改善\nbrave (adj.) /brev/ 勇敢的\nmemory (n.) /ˈmɛməri/ 記憶\ncontrol (v.) /kənˈtrol/ 控制",
+
+3: "curious (adj.) /ˈkjʊriəs/ 好奇的\nrecord (v.) /rɪˈkɔrd/ 記錄、錄音、(n.) 記錄、唱片\nallow (v.) /əˈlaʊ/ 允許\nenergy (n.) /ˈɛnɚdʒi/ 精力、能量",
+
+
+
+4: "artist (n.) /ˈɑrtɪst/ 藝術家\ncreate (v.) /kriˈet/ 創造\nfreedom (n.) /ˈfridəm/ 自由\ngenerous (adj.) /ˈdʒɛnərəs/ 慷慨的",
+
+12: "confident (adj.) /ˈkɑnfədənt/ 有信心的\nbitter (adj.) /ˈbɪtɚ/ 苦的、嚴酷的\namount (n.) /əˈmaʊnt/ 總數\ncontract (n.) /ˈkɑntrækt/ 契約、合同",
+
+14: "area (n.) /ˈɛriə/ 地區、面積\nasleep (adj.) /əˈslip/ 睡著的\nbiology (n.) /baɪˈɑlədʒi/ 生物學\nconcern (v.) /kənˈsɝn/ 使擔心、(n.) 關懷",
+
+5: "protect (v.) /prəˈtɛkt/ 保護\nvaluable (adj.) /ˈvæljuəbəl/ 有價值的\nexplain (v.) /ɪkˈsplen/ 解釋\ncough (v.) /kɔf/ 咳嗽、(n.) 咳嗽",
+
+6: "peaceful (adj.) /ˈpisfəl/ 寧靜的、和平的\ndevelop (v.) /dɪˈvɛləp/ 發展\ncompare (v.) /kəmˈpɛr/ 比較\ndanger (n.) /ˈdendʒɚ/ 危險",
+
+7: "intelligent (adj.) /ɪnˈtɛlədʒənt/ 有才智的\nprovide (v.) /prəˈvaɪd/ 供應\ninvitation (n.) /ˌɪnvəˈteʃən/ 邀請\nconversation (n.) /ˌkɑnvɚˈseʃən/ 會話",
+
+8: "discover (v.) /dɪˈskʌvɚ/ 發現\nopinion (n.) /əˈpɪnjən/ 意見\nrespect (v.) /rɪˈspɛkt/ 尊敬、(n.) 尊敬\ncomplete (adj.) /kəmˈplit/ 完整的、徹底的、(v.) 完成",
+
+9: "energetic (adj.) /ˌɛnɚˈdʒɛtɪk/ 精力充沛的\navoid (v.) /əˈvɔɪd/ 避免\nimagine (v.) /ɪˈmædʒɪn/ 想像\ncareless (adj.) /ˈkɛrlɪs/ 粗心的",
+
+10: "receive (v.) /rɪˈsiv/ 收到\ncongratulation (n.) /kənˌgrætʃəˈleʃən/ 祝賀\npromise (v.) /ˈprɑmɪs/ 答應\nactive (adj.) /ˈæktɪv/ 活躍的",
+11: "album (n.) /ˈælbəm/ 相簿、集郵簿、唱片集\nadvise (v.) /ədˈvaɪz/ 勸告\nbasement (n.) /ˈbesmənt/ 地下室\narrange (v.) /əˈrendʒ/ 排列、整理",
+
+
+13: "assume (v.) /əˈsum/ 假定\nalive (adj.) /əˈlaɪv/ 活著的\ncharge (v.) /tʃɑrdʒ/ 索價、充電、(n.) 費用、充電\nclimate (n.) /ˈklaɪmət/ 氣候",
+
+
+15: "captain (n.) /ˈkæptən/ 隊長、機長、艦長\nbundle (n.) /ˈbʌndl/ 捆、大量\ncancel (v.) /ˈkænsəl/ 取消\nbasic (adj.) /ˈbesɪk/ 基本的",
+
+16: "button (v.) /ˈbʌtn/ 扣鈕扣、(n.) 鈕扣\ncertain (adj.) /ˈsɝtn/ 肯定的\nambulance (n.) /ˈæmbjələns/ 救護車\nchildhood (n.) /ˈtʃaɪldˌhʊd/ 幼時",
+
+17: "clever (adj.) /ˈklɛvɚ/ 聰明伶俐的\ndecision (n.) /dɪˈsɪʒən/ 決定\ncomplain (v.) /kəmˈplen/ 抱怨\ntradition (n.) /trəˈdɪʃən/ 傳統",
+
+18: "broadcast (v.) /ˈbrɔdˌkæst/ 廣播\nenvironment (n.) /ɪnˈvaɪrənmənt/ 環境\ncontinue (v.) /kənˈtɪnju/ 繼續\nattention (n.) /əˈtɛnʃən/ 注意、專心",
+
+19: "admire (v.) /ədˈmaɪr/ 欽佩、欣賞\nculture (n.) /ˈkʌltʃɚ/ 文化\ndecorate (v.) /ˈdɛkəˌret/ 佈置\nsucceed (v.) /səkˈsid/ 成功",
+
+20: "damage (v.) /ˈdæmɪdʒ/ 損害、(n.) 損害\ncompany (n.) /ˈkʌmpəni/ 公司\ndesign (v.) /dɪˈzaɪn/ 設計、(n.) 圖案、設計\napologize (v.) /əˈpɑləˌdʒaɪz/ 道歉" };
+
+const fridayData1 = {
+1: "Actions speak louder than words.\n行動勝於言語\n實際作為比空洞的承諾更有說服力。",
+
+2: "The early bird catches the worm.\n早起的鳥兒有蟲吃\n及早行動者，能獲得優勢與機會成功。",
+
+3: "Practice makes perfect.\n練習造就完美\n持續重複練習是精通技能的必經之路。",
+
+4: "Where there's a will, there's a way.\n有志者事竟成\n堅定的決心與毅力能克服所有障礙。",
+
+5: "Rome wasn't built in a day.\n羅馬不是一天造成的\n偉大的成就需要時間與耐心，不可急於求成。",
+
+6: "No pain, no gain.\n一分耕耘，一分收穫\n不付出辛勞與努力，就無法獲得成果。",
+
+7: "The harder you work, the luckier you get.\n越努力越幸運\n成功看似是運氣，實則源於持續不懈的努力。",
+
+8: "Slow and steady wins the race.\n穩紮穩打終會勝利\n持續穩定的努力，勝過三分鐘熱度的急躁冒進。",
+
+9: "A journey of a thousand miles begins with a single step.\n千里之行始於足下\n再遠大的目標與夢想，都要從第一步開始實踐。",
+
+10: "Nothing ventured, nothing gained.\n不入虎穴，焉得虎子\n不冒險嘗試、跨出舒適圈，就無法獲得回報。",
+
+11: "Fall seven times, stand up eight.\n七次跌倒，八次站起\n真正的力量在於面對失敗與挫折後，仍能持續前進。",
+
+12: "Winners never quit, quitters never win.\n勝者永不放棄，放棄者永無勝利\n堅持到底是成功的關鍵特質。",
+
+13: "Dream big, start small, act now.\n大膽夢想，從小做起，立刻行動\n兼顧遠大抱負與實際執行力的智慧。",
+
+14: "Don't put all your eggs in one basket.\n別把所有雞蛋放在同一個籃子裡\n應分散風險，避免孤注一擲的策略。",
+
+15: "You can't judge a book by its cover.\n不能憑封面評斷一本書\n不應該根據外表或第一印象來判斷人事物的本質。",
+
+16: "Every cloud has a silver lining.\n黑暗中總有一線光明\n困境中總能找到希望、轉機或正面意義。",
+
+17: "Failure is the mother of success.\n失敗為成功之母\n從失敗中吸取教訓，是通往成功的必經之路。",
+
+18: "It's never too late to learn.\n活到老學到老\n學習是終身的過程，任何年齡都不影響接觸新事物。",
+
+19: "When the going gets tough, the tough get going.\n艱難時刻正是強者奮起之時\n困境能激發真正強者的潛能與堅韌。",
+
+20: "Fortune favors the brave.\n勇者得天助\n勇於冒險、敢於面對挑戰的人更容易獲得機會。"
+};
+
+
+const mondayData2 = {
+2: "「歸」依佛門 → 皈\n「恭」逢其盛 → 躬\n「克」苦耐勞 → 刻",
+
+3: "同仇敵「慨」 → 愾\n天作之「和」 → 合\n曲高「合」寡 → 和",
+
+4: "醍醐「貫」頂 → 灌\n人文「匯」萃 → 薈\n迫不「急」待 → 及",
+
+5: "不「逕」而走 → 脛\n得魚忘「荃」 → 筌\n銀貨兩「迄」 → 訖",
+
+6: "「磬」竹難書 → 罄\n鳩占「雀」巢 → 鵲\n穩操勝「卷」 → 券",
+
+7: "「展」露頭角 → 嶄\n孤高自「詡」 → 許\n安排就「序」 → 緒",
+
+8: "相得益「張」 → 彰\n真知「卓」見 → 灼\n一見「鐘」情 → 鍾",
+
+9: "重蹈覆「徹」 → 轍\n無所「是」從 → 適\n「插」血為盟 → 歃",
+
+10: "額「首」稱慶 → 手\n獨「豎」一幟 → 樹\n眾口「礫」金 → 鑠",
+
+11: "「儒」子可教 → 孺\n繁文「褥」節 → 縟\n滄海一「栗」 → 粟",
+
+12: "老態龍「鐘」 → 鍾\n進退「帷」谷 → 維\n飛「煌」騰達 → 黃",
+
+13: "「坐」無虛席 → 座\n「呱」噪不休 → 聒\n「喧」然大波 → 軒",
+
+14: "「致」人於死 → 置\n叱「咋」風雲 → 吒\n別出「新」裁 → 心",
+
+15: "一「愁」莫展 → 籌\n濫「芋」充數 → 竽\n「矻」立不搖 → 屹",
+
+16: "大學「肆」業 → 肄\n滿腹「勞」騷 → 牢\n「搶」詞奪理 → 強",
+
+17: "各行其「事」 → 是\n大聲「急」呼 → 疾\n急「功」好義 → 公",
+
+18: "不可思「異」 → 議\n出奇「至」勝 → 制\n「鬼」計多端 → 詭",
+
+19: "「宿」興夜寐 → 夙\n鬼「釜」神工 → 斧\n天真「瀾」漫 → 爛",
+
+20: "臨陣「摩」槍 → 磨\n卑躬「曲」膝 → 屈\n「侮」人不倦 → 誨"
+
+
+};
+
+const mondayIdiom2 = {
+2: "洞燭機先\n在事情發生之前，就能夠先清楚的看見徵兆。",
+3: "捨本逐末\n捨棄根本，而去追求末節；形容不顧重要的事情，而去注意無關緊要的事情。",
+4: "三緘其口\n嘴上加了三道封條；比喻說話極為謹慎，不輕易透露事情。",
+5: "學富五車\n形容人讀書很多，學問淵博。",
+6: "聲淚俱下\n一邊哭泣，一邊流淚；形容哀痛悲切的樣子。",
+7: "不寒而慄\n不是因為寒冷而發抖，而是因看到、聽到或想到害怕的事，因而驚恐不已。",
+8: "捉襟見肘\n衣服破舊，拉動衣襟時手肘會露出來。比喻生活窮困，或能力不足、事情太多而難以應付。",
+9: "大庭廣眾\n形容人多而公開的場合。",
+10: "喜出望外\n因出乎意料的喜事而特別高興。",
+11: "星羅棋布\n像星星或棋子般排列散布；形容分布極廣，數量可觀。",
+12: "滄海桑田\n大海變成農田，農田又變成大海；比喻世事變遷很大。",
+13: "失之交臂\n與好機會擦身而過，有惋惜的意思。",
+14: "左右逢源\n比喻做事得心應手，事事順遂而沒有阻礙。",
+15: "力挽狂瀾\n努力挽回險惡的局勢，或制止衰敗不正的風氣。",
+16: "難言之隱\n深藏於心，難以向他人訴說的秘密。",
+17: "優柔寡斷\n遇事猶豫不決，缺乏果斷的魄力與精神。",
+18: "篳路藍縷\n駕著柴車，穿著破舊的衣服，去開闢土地。現多用來形容開創事業的艱辛困苦。",
+19: "毛骨悚然\n因怪異、驚險或陰森的情景感到恐懼的樣子；有時也指感覺非常寒冷。",
+20: "豁然開朗\n由狹窄暗晦轉為開闊明亮；也常用來形容突然明白道理，或問題得到解決。"
+
+};
+
+const tuesdaySentence2 = {
+2: "洞燭機先\n多虧你洞燭機先，發現有山崩跡象，大家才能化險為夷。",
+3: "捨本逐末\n學生的本分就是把書讀好，不要捨本逐末地只想玩樂。",
+4: "三緘其口\n警方對案件內容三緘其口，不願透露任何消息。",
+5: "學富五車\n黃教授學富五車，是學生們請益的好對象。",
+6: "聲淚俱下\n趙婆婆聲淚俱下，希望兒子能迷途知返，不要一錯再錯。",
+7: "不寒而慄\n那部恐怖片中陰森的畫面，讓觀眾感到不寒而慄。",
+8: "捉襟見肘\n失業後，他的生活陷入捉襟見肘的困境。",
+9: "大庭廣眾\n膽大包天的歹徒，竟然在大庭廣眾之下公然行搶。",
+10: "喜出望外\n出差的父親提早回來，讓我和弟弟喜出望外。",
+11: "星羅棋布\n加拿大千島湖上，小島星羅棋布，是著名的觀光勝地。",
+12: "滄海桑田\n王先生五十年後再次返家，家鄉卻已滄海桑田，人事全非了。",
+13: "失之交臂\n因為錯過了選拔時間，他與代表學校參加比賽的機會失之交臂。",
+14: "左右逢源\n他個性隨和，善於與人相處，因此做事總能左右逢源。",
+15: "力挽狂瀾\n面對公司的危機，他努力力挽狂瀾，希望挽救困境。",
+16: "難言之隱\n面對大家的詢問，他似乎有難言之隱，始終不肯說明。",
+17: "優柔寡斷\n姐姐優柔寡斷的個性，讓她錯失了許多好機會。",
+18: "篳路藍縷\n臺灣今日的繁榮，都要歸功於先民篳路藍縷的努力。",
+19: "毛骨悚然\n一靠近這棟傳說中的鬼屋，我就覺得毛骨悚然。",
+20: "豁然開朗\n受到好友的鼓勵，他本來憂愁的心情一下子就豁然開朗了。"
+};
+
+
+
+const thursdayData2 = {
+2: "female (adj.) /ˈfimel/ 女性的、(n.) 雌性動物\nhighway (n.) /ˈhaɪˌwe/ 公路、幹道\npuzzle (v.) /ˈpʌzəl/ 使迷惑、(n.) 謎\nmango (n.) /ˈmæŋɡo/ 芒果",
+
+3: "kitten (n.) /ˈkɪtn/ 小貓\noverseas (adj.) /ˌovɚˈsiz/ 國外的、(adv.) 在海外\nthunder (n.) /ˈθʌndɚ/ 雷\nscarf (n.) /skɑrf/ 圍巾",
+
+4: "foolish (adj.) /ˈfulɪʃ/ 愚蠢的\ngarage (n.) /ɡəˈrɑʒ/ 車庫\njoke (v.) /dʒok/ 開玩笑、(n.) 笑話\npanda (n.) /ˈpændə/ 貓熊",
+
+5: "flat tire (n.) /ˌflæt ˈtaɪɚ/ 爆胎\nformal (adj.) /ˈfɔrməl/ 正式的\nmagician (n.) /məˈdʒɪʃən/ 魔術師\nvolleyball (n.) /ˈvɑliˌbɔl/ 排球",
+
+6: "helicopter (n.) /ˈhɛlɪˌkɑptɚ/ 直昇機\nnaughty (adj.) /ˈnɔti/ 頑皮的\nnovel (n.) /ˈnɑvəl/ 小說\nparking lot (n.) /ˈpɑrkɪŋ ˌlɑt/ 停車場",
+
+7: "government (n.) /ˈɡʌvɚnmənt/ 政府\nhaircut (n.) /ˈhɛrˌkʌt/ 理髮\nliquid (n.) /ˈlɪkwɪd/ 液體\nstormy (adj.) /ˈstɔrmi/ 暴風雨的",
+
+8: "jealous (adj.) /ˈdʒɛləs/ 嫉妒的\nmicrowave (n.) /ˈmaɪkroˌwev/ 微波爐\nprincipal (n.) /ˈprɪnsəpəl/ 校長\nsneakers (n.) /ˈsnikɚz/ 球鞋",
+
+9: "raincoat (n.) /ˈrenˌkot/ 雨衣\nstationery (n.) /ˈsteʃəˌnɛri/ 文具\ntrap (v.) /træp/ 設陷阱、(n.) 陷阱、圈套\nwaterfall (n.) /ˈwɔtɚˌfɔl/ 瀑布",
+
+10: "freezer (n.) /ˈfrizɚ/ 冰箱的冷凍部、冷凍箱\nkindergarten (n.) /ˈkɪndɚˌɡɑrtn/ 幼稚園\noverweight (adj.) /ˌovɚˈwet/ 超重的、過重的\nsupper (n.) /ˈsʌpɚ/ 晚餐",
+
+11: "alarm (n.) /əˈlɑrm/ 警報、驚慌、警鈴\nfancy (adj.) /ˈfænsi/ 花俏的、特級的\nhero (n.) /ˈhɪro/ 英雄\nlamb (n.) /læm/ 小羊",
+
+12: "swan (n.) /swɑn/ 天鵝\ncabbage (n.) /ˈkæbɪdʒ/ 包心菜\nprofessor (n.) /prəˈfɛsɚ/ 教授\nankle (n.) /ˈæŋkəl/ 腳踝",
+
+13: "pigeon (n.) /ˈpɪdʒən/ 鴿子\nvalley (n.) /ˈvæli/ 山谷\nchemistry (n.) /ˈkɛmɪstri/ 化學\nthief (n.) /θif/ 小偷",
+
+14: "cartoon (n.) /kɑrˈtun/ 卡通\nsand (n.) /sænd/ 沙\nhuman (n.) /ˈhjumən/ 人、(adj.) 人類的\nteapot (n.) /ˈtiˌpɑt/ 茶壺",
+
+15: "crayon (n.) /ˈkreˌɑn/ 蠟筆\ndolphin (n.) /ˈdɑlfɪn/ 海豚\ngold (adj.) /ɡold/ 金製的、(n.) 黃金\nwood (n.) /wʊd/ 木材",
+
+16: "ketchup (n.) /ˈkɛtʃəp/ 番茄醬\nbarber (n.) /ˈbɑrbɚ/ 男理髮師\ncotton (n.) /ˈkɑtn/ 棉花\neagle (n.) /ˈiɡəl/ 老鷹",
+
+17: "mosquito (n.) /məˈskito/ 蚊子\nbeard (n.) /bɪrd/ 鬍子\nforest (n.) /ˈfɔrəst/ 森林\nhall (n.) /hɔl/ 大廳、講堂",
+
+18: "monster (n.) /ˈmɑnstɚ/ 怪物\ngeography (n.) /dʒiˈɑɡrəfi/ 地理\nballoon (n.) /bəˈlun/ 汽球\ncereal (n.) /ˈsirɪəl/ 麥片",
+
+19: "fence (n.) /fɛns/ 柵欄、籬笆\nJazz (n.) /dʒæz/ 爵士樂\ncable (n.) /ˈkebəl/ 纜索、有線電視\ndeer (n.) /dɪr/ 鹿",
+
+20: "hammer (v.) /ˈhæmɚ/ 敲打、(n.) 鎚\nfilm (n.) /fɪlm/ 膠捲、影片\nnet (n.) /nɛt/ 網子\nnation (n.) /ˈneʃən/ 國家"
+
+};
+const wednesdayIdiom1 = {
+
+1: "自慚形穢\n自覺容貌、舉止或能力不如別人，而感到羞慚。常用來形容自卑。",
+
+2: "東施效顰\n比喻不衡量自身條件，而盲目模仿他人，以致收到反效果。",
+
+3: "相敬如賓\n像對待客人般有禮貌，彼此互相敬重。多用於夫妻之間。",
+
+4: "氣象萬千\n景象千變萬化，非常宏偉壯麗。",
+
+5: "世外桃源\n原指與世隔絕、沒有戰亂，人們安居樂業的地方；後多比喻風景優美、人煙稀少的地方。",
+
+6: "名落孫山\n指考試失敗或選拔落選。",
+
+7: "搖曳生姿\n形容隨風搖擺的優美姿態。",
+
+8: "掩耳盜鈴\n捂住自己的耳朵去偷鈴鐺；比喻自己欺騙自己，愚昧的掩飾行為。",
+
+9: "感人肺腑\n比喻內心深處受到感動。",
+
+10: "一貧如洗\n形容一無所有，十分貧窮。",
+
+11: "翻山越嶺\n翻過高山，越過峻嶺。形容不畏勞苦地前進，也比喻歷經千辛萬苦。",
+
+12: "拾人牙慧\n撿取別人說過的話；比喻一味抄襲別人的意見或言論。",
+
+13: "捨近求遠\n捨棄近的，去追求遠的；比喻做事不得要領或方法不切實際。",
+
+14: "獨占鰲頭\n表示在競賽中得到第一名。",
+
+15: "雪上加霜\n比喻災禍接連發生，又遭受新的打擊，使情況更加困難。",
+
+16: "金科玉律\n盡善盡美的法令，或寶貴而值得遵守的格言。",
+
+17: "流離失所\n多指在災禍或戰亂中到處流浪，生活艱苦，沒有安身之處。",
+
+18: "風餐露宿\n在風裡吃飯，在露天睡覺；形容旅途或野外生活的奔波勞苦。",
+
+19: "力爭上游\n努力爭取上進，往更好的方向發展。",
+
+20: "孜孜不倦\n勤勉努力，不知道疲倦。"
+
+};
+
+const thursdaySentence1 = {
+
+1:"自慚形穢\n看到同學優異的表現，他不禁自慚形穢。",
+
+2:"東施效顰\n學習別人的優點很好，但若只是東施效顰，反而會失去自己的特色。",
+
+3:"相敬如賓\n王先生和太太結婚多年，彼此依然相敬如賓，感情十分融洽。",
+
+4:"氣象萬千\n登上高山遠眺，眼前氣象萬千，令人感到十分震撼。",
+
+5:"世外桃源\n這座小村莊環境清幽，生活安逸，彷彿是一處世外桃源。",
+
+6:"名落孫山\n他因為準備不夠充分，這次升學考試不幸名落孫山。",
+
+7:"搖曳生姿\n微風吹過湖邊，柳樹枝條搖曳生姿，形成美麗的景象。",
+
+8:"掩耳盜鈴\n鐵證如山，你若再掩耳盜鈴，假裝沒事，只會讓大家看笑話。",
+
+9:"感人肺腑\n這部電影劇情感人肺腑，看完後讓許多人流下感動的眼淚。",
+
+10:"一貧如洗\n他年輕時一貧如洗，但靠著努力工作，終於改善了生活。",
+
+11:"翻山越嶺\n探險隊員翻山越嶺，終於抵達偏遠的山區進行調查。",
+
+12:"拾人牙慧\n寫文章時應該加入自己的想法，不要只是拾人牙慧，缺乏創意。",
+
+13:"捨近求遠\n明明附近就有便利的商店，他卻捨近求遠，跑到很遠的地方購買。",
+
+14:"獨占鰲頭\n她努力練習多年，終於在這次比賽中獨占鰲頭，獲得第一名。",
+
+15:"雪上加霜\n原本生活就很困難，又遇到失業，真是雪上加霜。",
+
+16:"金科玉律\n做人誠實守信，是父母教導我的金科玉律。",
+
+17:"流離失所\n戰爭使許多人流離失所，不得不離開自己的家園。",
+
+18:"風餐露宿\n古代旅人常常風餐露宿，過著辛苦奔波的生活。",
+
+19:"力爭上游\n只要努力學習，力爭上游，就能取得更好的成績。",
+
+20:"孜孜不倦\n愛迪生孜孜不倦地研究發明，最後取得許多重要成果。"
+
+};
+
+
+const wednesdayIdiom2 = {
+
+2: "退避三舍\n本指交戰時退兵九十里相讓；後比喻主動退讓，不與人相爭。",
+
+3: "咫尺天涯\n形容距離雖近，卻無緣相見，如同相隔千里。",
+
+4: "一日三秋\n一天不見，就好比過了三年；形容思念殷切。多用於對親人或好友的思念。",
+
+5: "阮囊羞澀\n比喻身上的錢太少或沒有錢。",
+
+6: "名列前茅\n指在考試或比賽中獲得優異成績；也可用來祝賀別人表現優良。",
+
+7: "改弦易轍\n改換琴弦，變更車行道路；比喻方向、制度、計畫等有所改變，有棄舊圖新的意思。",
+
+8: "味如嚼蠟\n味道像嚼蠟一樣；形容文章、言語枯燥無味，也可形容心情索然無味。",
+
+9: "坐井觀天\n坐在井裡看天；比喻眼光狹窄，見識淺薄。",
+
+10: "破鏡重圓\n破裂的鏡子重新合在一起；比喻夫妻感情破裂後重新和好，或離散後再次相聚。",
+
+11: "吹毛求疵\n吹開毛尋找細小的毛病；比喻故意挑剔缺點，硬要找錯誤。",
+
+12: "曲高和寡\n原比喻知音難尋；後用來形容文章、意見或作品太深奧，了解的人很少。",
+
+13: "反璞歸真\n比喻去除虛偽浮華，回歸原本純真的本性。",
+
+14: "尸位素餐\n比喻人空占職位，卻白領薪水，不好好做事。",
+
+15: "殷鑒不遠\n前人的失敗教訓就在眼前，應該引以為戒。",
+
+16: "人微言輕\n因為地位低微，言論主張沒有力量，也不受重視。多用於自謙之詞。",
+
+17: "心猿意馬\n心情如猿猴般浮躁，意志像野馬般奔馳。多用來形容人心思浮定，不能自持。",
+
+18: "以逸待勞\n原指作戰時採取守勢，等敵人疲倦後再出擊；後用來比喻處事從容應付。。",
+
+19: "奇恥大辱\n極大的羞恥與侮辱。",
+
+20: "一蹶不振\n跌了一跤後就無法再站起來；比喻遭受挫折或失敗後，意志消沉，無法重新振作。"
+
+};
+
+const thursdaySentence2 = {
+
+2: "退避三舍\n面對對方的挑釁，他選擇退避三舍，避免發生衝突。",
+
+3: "咫尺天涯\n我們雖然住得很近，卻因為工作忙碌，很少見面，真是咫尺天涯。",
+
+4: "一日三秋\n媽媽才出國兩天，我就非常想念她，有一日三秋的感覺。",
+
+5: "阮囊羞澀\n他失業半年後，阮囊羞澀，生活變得十分困難。",
+
+6: "名列前茅\n我們每天努力練習，終於在這次比賽中名列前茅。",
+
+7: "改弦易轍\n新主管上任後，公司經營方向也跟著改弦易轍。",
+
+8: "味如嚼蠟\n這篇文章內容空洞，讀起來味如嚼蠟，毫無趣味。",
+
+9: "坐井觀天\n我們應該多閱讀、多接觸外面的世界，才不會坐井觀天。",
+
+10: "破鏡重圓\n這對夫妻經歷風波後，終於破鏡重圓，重新過著幸福的生活。",
+
+11: "吹毛求疵\n做人不要總是吹毛求疵，應該多看別人的優點。",
+
+12: "曲高和寡\n這部作品雖然很有深度，卻因曲高和寡，很少人欣賞。",
+
+13: "反璞歸真\n退休後，他選擇回到鄉下，過著反璞歸真的生活。",
+
+14: "尸位素餐\n他在工作上尸位素餐，常常受到同事批評。",
+
+15: "殷鑒不遠\n前人的失敗殷鑒不遠，我們應該記取教訓。",
+
+16: "人微言輕\n關於這次的討論案，林主委一直自謙自己人微言輕，不願發表意見。",
+
+17: "心猿意馬\n一想到放學後和好朋友去逛街，他就心猿意馬，無法專心聽講。",
+
+18: "以逸待勞\n這次的馬拉松大賽，你不妨以逸待勞，最後關頭再迎頭趕上。",
+
+19: "奇恥大辱\n這次的失敗對他而言，是一場奇恥大辱。",
+
+20: "一蹶不振\n遇到困難不能一蹶不振，要勇敢重新站起來。"
+
+};
+
+const fridayData2 = {
+
+2: "Look before you leap.\n三思而後行\n在採取行動或做決定前，應謹慎評估風險。",
+  3: "Haste makes waste.\n欲速則不達\n過於匆忙、急功近利反而容易導致錯誤與浪費。",
+  4: "Prevention is better than cure.\n預防勝於治療\n及早處理小問題或事先防範，能避免日後引發大麻煩。",
+  5: "Strike while the iron is hot.\n打鐵趁熱\n充分利用有利條件，在最佳時機採取行動。",
+  6: "Don't cry over spilled milk.\n覆水難收，不必為既成事實懊悔\n已發生的事情無法改變，懊惱無濟於事，應向前看。",
+  7: "Don't put the cart before the horse.\n不要本末倒置\n處理事情應按照正確、合理的先後順序。",
+  8: "A bird in the hand is worth two in the bush.\n一鳥在手勝過二鳥在林\n確定的小利益或現有的東西，優於不確定的大機會。",
+  9: "Curiosity killed the cat.\n好奇心害死貓\n警告人們過度探究不該知道或與己無關的事可能招致禍端。",
+  10: "The devil is in the details.\n細節藏魔鬼\n計劃或事情的核心關鍵與隱藏問題，往往出在小細節上。",
+  11: "Don't throw the baby out with the bathwater.\n不要因小失大\n不應在去除壞的事物時，連同好的、有價值的東西一起丟棄。",
+  12: "Hope for the best, prepare for the worst.\n做最好的期待，做最壞的準備\n一種既保持樂觀，同時又具備危機意識的平衡態度。",
+  13: "Cross that bridge when you come to it.\n船到橋頭自然直\n不必過早去擔心或煩惱尚未發生的遠期問題。",
+  14: "Let sleeping dogs lie.\n別惹事生非（讓睡著的狗躺著）\n不要無故去觸動、打擾已平息的事情，以免引發新的爭端。",
+  15: "There's no such thing as a free lunch.\n天下沒有白吃的午餐\n天下沒有不勞而獲的事，任何好處背後都有其代價。",
+  16: "What goes around comes around.\n善惡終有報 \n你的行為與付出，最終都會以相同的形式回到自己身上。",
+  17: "Life is what you make it.\n人生由自己創造\n你的態度、思維與選擇，決定了你生活的品質與樣貌。",
+  18: "Don't sweat the small stuff.\n別為小事煩惱\n人生精力有限，不值得浪費在無關緊要的瑣碎事物上。",
+  19: "Every dog has its day.\n人人皆有出頭天（風水輪流轉）\n每個人終有機會成功，一生中總會有走運、迎來高光的時刻。",
+  20: "Knowledge is power.\n知識就是力量\n擁有資訊、智慧與理解能力，能賦予人強大的優勢。"
+};
+
+
+    function init() { setToToday(); }
+    function setToToday() { const dp = document.getElementById('date-picker'); const now = new Date(); dp.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`; renderContent(now); }
+    function handleDateChange() { renderContent(new Date(document.getElementById('date-picker').value)); }
+   
+function formatToCircle(text) {
+    return text.replace(/「(.)」/g, '<span class="wrong-word-container">$1<span class="red-circle"></span></span>');
+}
+
+
+function formatEnglish(text) {
+    return text.split("\n").map(line => {
+
+        const match = line.match(/^(.+?)\s(\(.+?\))\s(\/.+?\/)\s(.+)$/);
+
+        if (match) {
+            const word = match[1];
+            const type = match[2];
+            const phonetic = match[3];
+            const meaning = match[4];
+
+            return `${word} ${phonetic} ${type} ${meaning}`;
+        }
+
+        return line;
+
+    }).join("\n");
+}
+    
+    
+function renderContent(dateObj) {
+
+    
+    const d1 = new Date(FALL_START); 
+    const d2 = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+
+
+
+
+let week;
+let semester;
+
+if (d2 >= SPRING_START) {
+    semester = 2;
+    week = Math.floor((d2 - SPRING_START) / 86400000 / 7) + 2;
+} else {
+    semester = 1;
+    week = Math.floor((d2 - d1) / 86400000 / 7) + 1;
+}
+
+const day = dateObj.getDay();
+
+
+        document.getElementById('weekday-display').innerText = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][day];
+        document.getElementById('week-display').innerText = (d2 < d1) ? "尚未開學" : `第 ${String(week).padStart(2, '0')} 週`;
+        
+        const area = document.getElementById('display-area');
+        if (week >= 1 && week <= 20) {
+            
+if (day === 1) { 
+
+    area.className = "idiom-layout";
+
+    const data =
+    (semester === 1 ? mondayIdiom1[week] : mondayIdiom2[week])
+    || "本週無資料";
+
+    const parts = data.split('\n');
+
+    area.innerHTML =
+    `<div class="idiom-term">${parts[0]}</div>
+     <div class="idiom-expl">${parts[1]}</div>`;
+}
+
+           else if (day === 2) { 
+
+    area.className = "idiom-layout";
+
+    const data =
+    (semester === 1 ? tuesdaySentence1[week] : tuesdaySentence2[week])
+    || "本週無資料";
+
+    const parts = data.split('\n');
+
+    area.innerHTML =
+    `<div class="idiom-term">${parts[0]}</div>
+     <div class="idiom-expl">${parts[1]}</div>`;
+}
+
+else if (day === 3) { 
+
+    area.className = "idiom-layout";
+
+    const data =
+    (semester === 1 ? wednesdayIdiom1[week] : wednesdayIdiom2[week])
+    || "本週無資料";
+
+    const parts = data.split('\n');
+
+    area.innerHTML =
+    `<div class="idiom-term">${parts[0]}</div>
+     <div class="idiom-expl">${parts[1]}</div>`;
+}
+else if (day === 4) { 
+
+    area.className = "idiom-layout";
+
+    const data =
+    (semester === 1 ? thursdaySentence1[week] : thursdaySentence2[week])
+    || "本週無資料";
+
+    const parts = data.split('\n');
+
+    area.innerHTML =
+    `<div class="idiom-term">${parts[0]}</div>
+     <div class="idiom-expl">${parts[1]}</div>`;
+}
+else if (day === 5) {
+
+    area.className = "idiom-layout";
+
+    const data =
+        (semester === 1 ? fridayData1[week] : fridayData2[week]) ||
+        "本週無資料";
+
+    const parts = data.split("\n");
+
+    area.innerHTML = `
+        <div class="proverb-term">${parts[0] || ""}</div>
+
+        <div class="proverb-translation">
+             ${parts[1] || ""}
+        </div>
+
+        <div class="proverb-meaning">
+            ${parts[2] || ""}
+        </div>
+    `;
+}
+
+
+
+else { 
+    area.className = "main-text-default"; 
+    area.innerText = `今天是星期${"日一二三四五六"[day]}，請抄寫聯絡簿事項。`; 
+}
+         
+        } else { area.className = "main-text-default"; area.innerText = "不在學期範圍內。"; }
+    }
+    init();
+</script>
+</body>
+</html>
